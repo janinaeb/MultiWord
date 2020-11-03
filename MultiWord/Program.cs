@@ -21,9 +21,7 @@ namespace MultiWord
 
             // Find all possible matching words
             IEnumerable<string> allMatchingWords = dictionary
-                .Where(word => word
-                    .GetLetterCount()
-                    .All(letter => textLetters.TryGetValue(letter.Key, out int textLetterCount) && textLetterCount >= letter.Value));
+                .Where(word => word.GetLetterCount().ExistsIn(textLetters));
 
             Console.WriteLine($"Found at total {allMatchingWords.Count()} matching words.");
 
@@ -34,7 +32,7 @@ namespace MultiWord
             foreach (var matchingWord in allMatchingWords)
             {
                 var letters = matchingWord.GetLetterCount();
-                if (letters.All(letter => textLettersLeft.TryGetValue(letter.Key, out int textLetterCount) && textLetterCount >= letter.Value))
+                if (letters.ExistsIn(textLettersLeft))
                 {
                     // Add match and subtract the letters from count
                     currentMatchingWords.Add(matchingWord);

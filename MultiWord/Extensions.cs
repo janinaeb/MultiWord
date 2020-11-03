@@ -17,5 +17,10 @@ namespace MultiWord
                     value => value.Count()
             );
         }
+
+        public static bool ExistsIn(this Dictionary<char, int> letters, Dictionary<char, int> matchingAgainstLetters)
+        {
+            return letters.All(letter => matchingAgainstLetters.TryGetValue(letter.Key, out int textLetterCount) && textLetterCount >= letter.Value);
+        }
     }
 }
