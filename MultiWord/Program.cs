@@ -20,17 +20,29 @@ namespace MultiWord
             List<string> dictionary = FileHandler.ReadFile($"{filePath}Ordlista.txt");
 
             // Find all possible matching words
-            IEnumerable<string> allMatchingWords = dictionary
-                .Where(word => word.GetLetterCount().ExistsIn(allTextLetters));
+            List<string> allMatchingWords = dictionary
+                .Where(word => word.GetLetterCount().ExistsIn(allTextLetters))
+                .OrderBy(word => word.Length)
+                .ToList();
 
             Console.WriteLine($"Found at total {allMatchingWords.Count()} matching words.");
 
             // Get the most optimal matching setup
-            List<string> bestMatchingWords = new List<string>();
-            List<string> currentMatchingWords = CalculateMatches(allMatchingWords, allTextLetters);
-
-            // TODO: Find the most optimal matchings!
-            bestMatchingWords = currentMatchingWords;
+            // by excluding a word at a time
+            List<string> bestMatchingWords = CalculateMatches(allMatchingWords, allTextLetters, new List<int>());
+            Console.WriteLine($"We begin at {bestMatchingWords.Count} matches.");
+            
+            //allMatchingWords = allMatchingWords.OrderByDescending(word => word.Length).ToList();
+            
+            for (int i = 0; i < allMatchingWords.Count; i++)
+            {
+                List<string> currentMatchingWords = CalculateMatches(allMatchingWords, allTextLetters, new List<int> { i });
+                if (currentMatchingWords.Count > bestMatchingWords.Count)
+                {
+                    Console.WriteLine($"{currentMatchingWords.Count} matches are better than {bestMatchingWords.Count}...");
+                    bestMatchingWords = currentMatchingWords;
+                }
+            }
 
             File.WriteAllLines($"{filePath}Output-Örebro-Karlstad.txt", bestMatchingWords);
 
@@ -43,12 +55,17 @@ namespace MultiWord
             Console.WriteLine("Bye!");
         }
 
-        private static List<string> CalculateMatches(IEnumerable<string> allMatchingWords, Dictionary<char, int> textLetters)
+        private static List<string> CalculateMatches(List<string> allMatchingWords, Dictionary<char, int> textLetters, List<int> excludeIndexes)
         {
             List<string> currentMatchingWords = new List<string>();
             Dictionary<char, int> textLettersLeft = new Dictionary<char, int>(textLetters);
-            foreach (var matchingWord in allMatchingWords)
+            for (int i = 0; i < allMatchingWords.Count; i++)
             {
+                if (excludeIndexes.Contains(i))
+                {
+                    continue;
+                }
+                var matchingWord = allMatchingWords[i];
                 var letters = matchingWord.GetLetterCount();
                 if (letters.ExistsIn(textLettersLeft))
                 {
