@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -9,22 +10,60 @@ namespace MultiWord
     {
         static void Main(string[] args)
         {
-            string outputFile = @"Files\Output-Örebro-Karlstad.txt";
+            string filePath = @"Files\";
 
-            List<string> text = ReadFile(@"Files\Hamlet.txt");
+            // Get all letters from the text to search
+            List<string> text = ReadFile($"{filePath}Hamlet.txt");
             Dictionary<char, int> textLetters = string.Join("", text).GetLetterCount();
 
-            List<string> dictionary = ReadFile(@"Files\Ordlista.txt");
-            IEnumerable<string> matchingWords = dictionary
+            // Get the dictionary of words to match on
+            List<string> dictionary = ReadFile($"{filePath}Ordlista.txt");
+
+            // Find all possible matching words
+            IEnumerable<string> allMatchingWords = dictionary
                 .Where(word => word
                     .GetLetterCount()
                     .All(letter => textLetters.TryGetValue(letter.Key, out int textLetterCount) && textLetterCount >= letter.Value));
 
-            File.WriteAllLines(outputFile, matchingWords);
+            Console.WriteLine($"Found at total {allMatchingWords.Count()} matching words.");
 
-            Console.WriteLine($"Found {matchingWords.Count()} matching words.");
-            Console.WriteLine("Opening the output file for you now...");
-            File.Open(outputFile, FileMode.Open);
+            // Get the most optimal matching setup
+            List<string> bestMatchingWords = new List<string>();
+            List<string> currentMatchingWords = new List<string>();
+            Dictionary<char, int> textLettersLeft = new Dictionary<char, int>(textLetters);
+            foreach (var matchingWord in allMatchingWords)
+            {
+                var letters = matchingWord.GetLetterCount();
+                if (letters.All(letter => textLettersLeft.TryGetValue(letter.Key, out int textLetterCount) && textLetterCount >= letter.Value))
+                {
+                    // Add match and subtract the letters from count
+                    currentMatchingWords.Add(matchingWord);
+                    foreach (var letter in letters)
+                    {
+                        textLettersLeft[letter.Key] -= letter.Value;
+                        if (textLettersLeft[letter.Key] <= 0)
+                        {
+                            textLettersLeft.Remove(letter.Key);
+                        }
+                    }
+
+                    // Stop loop if no letters left
+                    if (!textLettersLeft.Any())
+                    {
+                        break;
+                    }
+                }
+            }
+
+            // TODO: Find the most optimal matchings!
+            bestMatchingWords = currentMatchingWords;
+
+            File.WriteAllLines($"{filePath}Output-Örebro-Karlstad.txt", bestMatchingWords);
+
+
+            Console.WriteLine($"Found most optimally {bestMatchingWords.Count()} matching words.");
+            Console.WriteLine("Opening the file directory for you now...");
+            Process.Start("explorer.exe", filePath);
             Console.WriteLine("Bye!");
             Console.ReadLine();
         }
