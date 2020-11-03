@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace MultiWord
 {
@@ -18,32 +19,18 @@ namespace MultiWord
 
             // Get the dictionary of words to match on
             List<string> dictionary = FileHandler.ReadFile($"{filePath}Ordlista.txt");
+            
+            dictionary.Sort((a, b) => a.Length.CompareTo(b.Length));
 
             // Find all possible matching words
             List<string> allMatchingWords = dictionary
                 .Where(word => word.GetLetterCount().ExistsIn(allTextLetters))
-                .OrderBy(word => word.Length)
                 .ToList();
 
             Console.WriteLine($"Found at total {allMatchingWords.Count()} matching words.");
 
             // Get the most optimal matching setup
-            // by excluding a word at a time
-            List<string> bestMatchingWords = CalculateMatches(allMatchingWords, allTextLetters, new List<int>());
-            Console.WriteLine($"We begin at {bestMatchingWords.Count} matches.");
-            
-            //allMatchingWords = allMatchingWords.OrderByDescending(word => word.Length).ToList();
-            
-            for (int i = 0; i < allMatchingWords.Count; i++)
-            {
-                List<string> currentMatchingWords = CalculateMatches(allMatchingWords, allTextLetters, new List<int> { i });
-                if (currentMatchingWords.Count > bestMatchingWords.Count)
-                {
-                    Console.WriteLine($"{currentMatchingWords.Count} matches are better than {bestMatchingWords.Count}...");
-                    bestMatchingWords = currentMatchingWords;
-                }
-            }
-
+            List<string> bestMatchingWords = CalculateOptimalMatches(allMatchingWords, allTextLetters).Result;
             File.WriteAllLines($"{filePath}Output-Örebro-Karlstad.txt", bestMatchingWords);
 
             // Write output messages
@@ -55,6 +42,30 @@ namespace MultiWord
             Console.WriteLine("Bye!");
         }
 
+        private static async Task<List<string>> CalculateOptimalMatches(List<string> allMatchingWords, Dictionary<char, int> allTextLetters)
+        {
+            // Get the most optimal matching setup
+            // by excluding a word at a time
+            List<string> bestMatchingWords = CalculateMatches(allMatchingWords, allTextLetters, new List<int>());
+            Console.WriteLine($"We begin at {bestMatchingWords.Count} matches.");
+            List<Task> matchingWorkChecks = new List<Task>();
+            for (int i = 0; i < allMatchingWords.Count; i++)
+            {
+                int j = i;
+                matchingWorkChecks.Add(Task.Factory.StartNew(() =>
+                {
+                    List<string> currentMatchingWords = CalculateMatches(allMatchingWords, allTextLetters, new List<int> { j });
+                    if (currentMatchingWords.Count > bestMatchingWords.Count)
+                    {
+                        Console.WriteLine($"{currentMatchingWords.Count} matches are better than {bestMatchingWords.Count}...");
+                        bestMatchingWords = currentMatchingWords;
+                    }
+                }));
+            }
+            await Task.WhenAll(matchingWorkChecks);
+            return bestMatchingWords;
+        }
+
         private static List<string> CalculateMatches(List<string> allMatchingWords, Dictionary<char, int> textLetters, List<int> excludeIndexes)
         {
             List<string> currentMatchingWords = new List<string>();
@@ -64,6 +75,11 @@ namespace MultiWord
                 if (excludeIndexes.Contains(i))
                 {
                     continue;
+                }
+                // Stop loop if no letters left
+                if (!textLettersLeft.Any())
+                {
+                    break;
                 }
                 var matchingWord = allMatchingWords[i];
                 var letters = matchingWord.GetLetterCount();
@@ -78,12 +94,6 @@ namespace MultiWord
                         {
                             textLettersLeft.Remove(letter.Key);
                         }
-                    }
-
-                    // Stop loop if no letters left
-                    if (!textLettersLeft.Any())
-                    {
-                        break;
                     }
                 }
             }
