@@ -9,6 +9,8 @@ namespace MultiWord
     {
         static void Main(string[] args)
         {
+            string outputFile = @"Files\Output-Örebro-Karlstad.txt";
+
             List<string> text = ReadFile(@"Files\Hamlet.txt");
             Dictionary<char, int> textLetters = string.Join("", text).GetLetterCount();
 
@@ -18,12 +20,12 @@ namespace MultiWord
                     .GetLetterCount()
                     .All(letter => textLetters.TryGetValue(letter.Key, out int textLetterCount) && textLetterCount >= letter.Value));
 
-            File.WriteAllLines(@"Files\Output-Örebro-Karlstad.txt", matchingWords);
+            File.WriteAllLines(outputFile, matchingWords);
 
-            foreach (var word in matchingWords)
-            {
-                Console.WriteLine(word);
-            }
+            Console.WriteLine($"Found {matchingWords.Count()} matching words.");
+            Console.WriteLine("Opening the output file for you now...");
+            File.Open(outputFile, FileMode.Open);
+            Console.WriteLine("Bye!");
             Console.ReadLine();
         }
 
